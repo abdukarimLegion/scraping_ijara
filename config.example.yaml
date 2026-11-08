@@ -1,0 +1,63 @@
+# Nusxa oling: cp config.example.yaml config.yaml
+database: listings.db
+notify_on_first_run: false     # true bo'lsa, birinchi yurishdagi eski e'lonlar uchun ham xabar beradi
+# proxy: http://user:pass@host:port
+
+notify:
+  console: true
+  # Telegram bot orqali (BOT_TOKEN, BOT_CHAT_ID muhit o'zgaruvchilari ham bo'ladi):
+  # telegram: {bot_token: "123:ABC", chat_id: "-100123456"}
+  # webhook: https://example.com/hook
+
+# Barcha manbalarga umumiy filtr (ixtiyoriy). Manba ichida `filters:` bilan almashtirish mumkin.
+filters:
+  include: []                  # masalan ["ijara", "аренда", "kvartira"] — bo'sh = hammasi
+  exclude: []                  # masalan ["sotiladi", "продается"]
+
+sources:
+  olx_toshkent:
+    type: olx
+    interval: 60
+    category_id: 8             # TEKSHIRING: OLX.uz ijara kategoriyasi ID'si (brauzer DevTools -> Network)
+    # region_id: 4
+    limit: 40
+
+  tg_kanallar:                 # OMMAVIY Telegram kanallar (login kerak emas), ~30s da bir
+    type: telegram_web
+    interval: 30
+    channels: []               # masalan [toshkent_ijara, kvartira_ijara_uz]
+    filters:
+      include: [ijara, ijaraga, аренда, сдается, сдаётся]
+
+  tg_live:                     # Telegram guruh + yopiq kanallar, REAL-TIME (TG_API_ID/TG_API_HASH kerak)
+    type: telegram_live
+    enabled: false
+    session: tg
+    chats: []                  # bo'sh = akkaunt a'zo bo'lgan barcha chatlar
+    filters:
+      include: [ijara, ijaraga, аренда, сдается, сдаётся]
+
+  # birbir.uz Cloudflare challenge bilan himoyalangan: oddiy HTTP ishlamaydi.
+  # `render: true` (Playwright) yordam berishi mumkin; selektorlarni sayt HTML'iga qarab to'ldiring.
+  birbir:
+    type: html
+    enabled: false
+    interval: 120
+    render: true
+    url: https://birbir.uz/            # kerakli kategoriya sahifasi
+    selectors:
+      item: "a[href*='/obyavlenie/']"  # TEKSHIRING
+      title: ".title"
+      price: ".price"
+
+  # joyme.uz — Vue SPA, ma'lumot https://api.resttab.com/api orqali. Endpoint/maydonlarni
+  # DevTools -> Network'dan topib to'ldiring (joriy tekshiruvda /room/search 500 qaytardi).
+  joyme:
+    type: json_api
+    enabled: false
+    interval: 120
+    url: https://api.resttab.com/api/room/search
+    params: {}
+    items_path: data
+    url_template: "https://joyme.uz/room/{id}"
+    fields: {id: id, title: name, description: description, price: price}
